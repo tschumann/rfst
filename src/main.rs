@@ -1,9 +1,11 @@
+mod filesystem;
+use crate::filesystem::file::FileAttributes;
 use std::env;
 use std::fs;
 use std::path::Path;
 use std::process;
 
-pub fn traverse_directory(root: &Path, files: &mut Vec<String>) -> Option<()> {
+pub fn traverse_directory(root: &Path, files: &mut Vec<FileAttributes>) -> Option<()> {
 	if !root.exists() {
 		eprintln!("No such path as {}", root.display().to_string());
 
@@ -28,7 +30,12 @@ pub fn traverse_directory(root: &Path, files: &mut Vec<String>) -> Option<()> {
 					traverse_directory(&path, files);
 				} else if attributes.is_file() {
 					// the path might not convert nicely to a string, but we'll assume that it does
-					files.push(path.to_str().unwrap().to_string());
+					files.push(FileAttributes {
+						file_path: path.to_str().unwrap().to_string(),
+						// TODO: get just the file name here
+						file_name: "".to_string(),
+						size: attributes.len()
+					});
 				}
 			}
 		},
@@ -53,16 +60,19 @@ fn main() {
 
 	let path: &Path = Path::new(&args[1]);
 
-	let mut files: Vec<String> = Vec::new();
+	let mut files: Vec<FileAttributes> = Vec::new();
 	let result: Option<()> = traverse_directory(path, &mut files);
 
 	match result {
 		Some(_) => {
 			for i in &files {
-				println!("{}", i);
+				println!("{}", i.file_path);
 			}
 
 		},
-		None    => process::exit(1),
+		None => {
+			// the error was printed in traverse_directory - just exit here
+			process::exit(1)
+		},
 	}
 }

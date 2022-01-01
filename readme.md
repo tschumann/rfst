@@ -10,7 +10,7 @@ Build
 cargo build
 ```
 
-A binary gets output in target/debug
+A binary gets output in target/debug/
 
 Test
 ----

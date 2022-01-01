@@ -48,18 +48,50 @@ pub fn traverse_directory(root: &Path, files: &mut Vec<FileAttributes>) -> Optio
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+	use super::*;
 
-    #[test]
-    fn test_traverse_directory() {
+	// Windows only because of OS-specific path separators
+	#[cfg(target_os = "windows")]
+	#[test]
+	fn test_traverse_directory_existing_directory() {
 		let path: &Path = Path::new("./src");
 
 		let mut files: Vec<FileAttributes> = Vec::new();
 
 		let result: Option<()> = traverse_directory(path, &mut files);
 
-		// TODO: filenames will differ here based on the operating system in use - normalise the paths somehow?
 		assert_eq!(true, result.is_some());
-        assert_eq!(4, files.len());
-    }
+		assert_eq!(4, files.len());
+
+		files.sort_by_key(|file| file.file_path.clone());
+
+		assert_eq!("./src\\filesystem\\file.rs", files[0].file_path);
+		assert_eq!("./src\\filesystem\\lib.rs", files[1].file_path);
+		assert_eq!("./src\\filesystem\\mod.rs", files[2].file_path);
+		assert_eq!("./src\\main.rs", files[3].file_path);
+	}
+
+	#[test]
+	fn test_traverse_directory_no_such_directory() {
+		let path: &Path = Path::new("./nosuchdir");
+
+		let mut files: Vec<FileAttributes> = Vec::new();
+
+		let result: Option<()> = traverse_directory(path, &mut files);
+
+		assert_eq!(false, result.is_some());
+		assert_eq!(0, files.len());
+	}
+
+	#[test]
+	fn test_traverse_directory_existing_file() {
+		let path: &Path = Path::new("./src/main.rs");
+
+		let mut files: Vec<FileAttributes> = Vec::new();
+
+		let result: Option<()> = traverse_directory(path, &mut files);
+
+		assert_eq!(false, result.is_some());
+		assert_eq!(0, files.len());
+	}
 }

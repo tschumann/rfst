@@ -23,11 +23,12 @@ pub fn find_duplicates(files: &mut Vec<FileAttributes>) -> HashMap::<String, Vec
 				// if it's the same file, skip it
 				continue;
 			}
+			// TODO: check the name too? make what is tested configurable?
 			if file.size == possible_duplicate.size && file.hash.eq(&possible_duplicate.hash) {
 				if duplicates.contains_key(&file.file_path) {
+					// TODO: this in-place editing of a HashMap feels untidy
 					duplicates.get_mut(&file.file_path).unwrap().push(possible_duplicate.file_path.clone());
-				}
-				else {
+				} else {
 					let mut duplicate_names: Vec<String> = Vec::<String>::new();
 
 					duplicate_names.push(possible_duplicate.file_path.clone());
@@ -42,7 +43,7 @@ pub fn find_duplicates(files: &mut Vec<FileAttributes>) -> HashMap::<String, Vec
 	return duplicates;
 }
 
-pub fn traverse_directory(root: &Path, files: &mut Vec<FileAttributes>) -> Option<()> {
+pub fn get_files_in_path(root: &Path, files: &mut Vec<FileAttributes>) -> Option<()> {
 	if !root.exists() {
 		eprintln!("No such path as {}", root.display().to_string());
 
@@ -62,7 +63,7 @@ pub fn traverse_directory(root: &Path, files: &mut Vec<FileAttributes>) -> Optio
 				let attributes = fs::metadata(&path).ok()?;
 
 				if attributes.is_dir() {
-					traverse_directory(&path, files);
+					get_files_in_path(&path, files);
 				} else if attributes.is_file() {
 					files.push(FileAttributes {
 						// the path might not convert nicely to a string, but we'll assume that it does
@@ -92,7 +93,7 @@ fn sha256_file(file_path: &Path) -> String {
 
 	io::copy(&mut file, &mut sha256).unwrap();
 
-	// convert it to a hex string - finalize returns not a string
+	// convert it to a hex string - finalize doesn't return a string
 	return format!("{:x}", sha256.finalize());
 }
 
@@ -108,7 +109,7 @@ mod tests {
 
 		let mut files: Vec<FileAttributes> = Vec::new();
 
-		let result: Option<()> = traverse_directory(path, &mut files);
+		let result: Option<()> = get_files_in_path(path, &mut files);
 
 		assert_eq!(true, result.is_some());
 		assert_eq!(6, files.len());
@@ -116,10 +117,6 @@ mod tests {
 		let duplicates: HashMap::<String, Vec<String>> = find_duplicates(&mut files);
 
 		assert_eq!(2, duplicates.keys().len());
-
-		for (duplicate_name, duplicates) in duplicates.iter() {
-			println!("{:?}: {:?}", duplicate_name, duplicates.len());
-		}
 
 		let asdf_copy_txt_dupes: &Vec<String> = duplicates.get("./test_data\\dir1\\asdf - Copy.txt").unwrap();
 		assert_eq!(2, asdf_copy_txt_dupes.len());
@@ -133,12 +130,12 @@ mod tests {
 	// Windows only because of OS-specific path separators
 	#[cfg(target_os = "windows")]
 	#[test]
-	fn test_traverse_directory_existing_directory() {
+	fn test_get_files_in_path_existing_directory() {
 		let path: &Path = Path::new("./src");
 
 		let mut files: Vec<FileAttributes> = Vec::new();
 
-		let result: Option<()> = traverse_directory(path, &mut files);
+		let result: Option<()> = get_files_in_path(path, &mut files);
 
 		assert_eq!(true, result.is_some());
 		assert_eq!(4, files.len());
@@ -154,24 +151,24 @@ mod tests {
 	}
 
 	#[test]
-	fn test_traverse_directory_no_such_directory() {
+	fn test_get_files_in_path_no_such_directory() {
 		let path: &Path = Path::new("./nosuchdir");
 
 		let mut files: Vec<FileAttributes> = Vec::new();
 
-		let result: Option<()> = traverse_directory(path, &mut files);
+		let result: Option<()> = get_files_in_path(path, &mut files);
 
 		assert_eq!(false, result.is_some());
 		assert_eq!(0, files.len());
 	}
 
 	#[test]
-	fn test_traverse_directory_existing_file() {
+	fn test_get_files_in_path_existing_file() {
 		let path: &Path = Path::new("./src/main.rs");
 
 		let mut files: Vec<FileAttributes> = Vec::new();
 
-		let result: Option<()> = traverse_directory(path, &mut files);
+		let result: Option<()> = get_files_in_path(path, &mut files);
 
 		assert_eq!(false, result.is_some());
 		assert_eq!(0, files.len());

@@ -1,7 +1,7 @@
 mod filesystem;
 use crate::filesystem::file::FileAttributes;
 use crate::filesystem::lib::find_duplicates;
-use crate::filesystem::lib::traverse_directory;
+use crate::filesystem::lib::get_files_in_path;
 use std::collections::HashMap;
 use std::env;
 use std::path::Path;
@@ -31,7 +31,7 @@ fn main() {
 	let path: &Path = Path::new(&args[1]);
 
 	let mut files: Vec<FileAttributes> = Vec::new();
-	let result: Option<()> = traverse_directory(path, &mut files);
+	let result: Option<()> = get_files_in_path(path, &mut files);
 
 	match result {
 		Some(_) => {
@@ -43,13 +43,17 @@ fn main() {
 			if find_duplicates_flag {
 				let duplicates: HashMap::<String, Vec<String>> = find_duplicates(&mut files);
 
-				for (duplicate_name, duplicates) in duplicates.iter() {
-					println!("{:?}: {:?}", duplicate_name, duplicates.len());
+				for (duplicated_file, duplicates) in duplicates.iter() {
+					println!("{}", duplicated_file);
+
+					for duplicate_file in duplicates {
+						println!("{} duplicates {}", duplicate_file, duplicated_file);
+					}
 				}
 			}
 		},
 		None => {
-			// the error was printed by traverse_directory - just exit here
+			// the error was printed by get_files_in_path - just exit here
 			process::exit(1)
 		},
 	}
